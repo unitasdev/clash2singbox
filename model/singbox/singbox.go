@@ -1,63 +1,103 @@
 package singbox
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strings"
+)
 
 type SingBoxOut struct {
-	Username             string                    `json:"username,omitempty"`
-	Password             string                    `json:"password,omitempty"`
-	Server               string                    `json:"server,omitempty"`
-	ServerPort           int                       `json:"server_port,omitempty"`
-	Tag                  string                    `json:"tag,omitempty"`
-	TLS                  *SingTLS                  `json:"tls,omitempty"`
-	Transport            *SingTransport            `json:"transport,omitempty"`
-	Type                 string                    `json:"type,omitempty"`
-	Method               string                    `json:"method,omitempty"`
-	AlterID              int                       `json:"alter_id,omitempty"`
-	Security             string                    `json:"security,omitempty"`
-	UUID                 string                    `json:"uuid,omitempty"`
-	Default              string                    `json:"default,omitempty"`
-	Outbounds            []string                  `json:"outbounds,omitempty"`
-	Interval             string                    `json:"interval,omitempty"`
-	Tolerance            int                       `json:"tolerance,omitempty"`
-	URL                  string                    `json:"url,omitempty"`
-	Network              string                    `json:"network,omitempty"`
-	Plugin               string                    `json:"plugin,omitempty"`
-	PluginOpts           string                    `json:"plugin_opts,omitempty"`
-	ObfsParam            string                    `json:"obfs_param,omitempty"`
-	Protocol             string                    `json:"protocol,omitempty"`
-	ProtocolParam        string                    `json:"protocol_param,omitempty"`
-	Flow                 string                    `json:"flow,omitempty"`
-	PacketEncoding       string                    `json:"packet_encoding,omitempty"`
-	AuthStr              string                    `json:"auth_str,omitempty"`
-	DisableMtuDiscovery  bool                      `json:"disable_mtu_discovery,omitempty"`
-	Down                 string                    `json:"down,omitempty"`
-	DownMbps             int                       `json:"down_mbps,omitempty"`
-	RecvWindow           int                       `json:"recv_window,omitempty"`
-	RecvWindowConn       int                       `json:"recv_window_conn,omitempty"`
-	Up                   string                    `json:"up,omitempty"`
-	UpMbps               int                       `json:"up_mbps,omitempty"`
-	Detour               string                    `json:"detour,omitempty"`
-	Multiplex            *SingMultiplex            `json:"multiplex,omitempty"`
-	Version              int                       `json:"version,omitempty"`
-	UdpOverTcp           *SingUdpOverTcp           `json:"udp_over_tcp,omitempty"`
-	SystemInterface      bool                      `json:"system_interface,omitempty"`
-	InterfaceName        string                    `json:"interface_name,omitempty"`
-	LocalAddress         []string                  `json:"local_address,omitempty"`
-	PrivateKey           string                    `json:"private_key,omitempty"`
-	Peers                []*SingWireguardMultiPeer `json:"peers,omitempty"`
-	PeerPublicKey        string                    `json:"peer_public_key,omitempty"`
-	PreSharedKey         string                    `json:"pre_shared_key,omitempty"`
-	Reserved             []int64                   `json:"reserved,omitempty"`
-	MTU                  uint                      `json:"mtu,omitempty"`
-	CongestionController string                    `json:"congestion_control,omitempty"`
-	UdpRelayMode         string                    `json:"udp_relay_mode,omitempty"`
-	ZeroRttHandshake     bool                      `json:"zero_rtt_handshake,omitempty"`
-	Heartbeat            string                    `json:"heartbeat,omitempty"`
-	Obfs                 *SingObfs                 `json:"obfs,omitempty"`
-	Ignored              bool                      `json:"-"`
-	TcpFastOpen          bool                      `json:"tcp_fast_open,omitempty"`
-	TcpMultiPath         bool                      `json:"tcp_multi_path,omitempty"`
-	Visible              []string                  `json:"-"`
+	Username                  string                    `json:"username,omitempty"`
+	Password                  string                    `json:"password,omitempty"`
+	Server                    string                    `json:"server,omitempty"`
+	ServerPort                int                       `json:"server_port,omitempty"`
+	Tag                       string                    `json:"tag,omitempty"`
+	TLS                       *SingTLS                  `json:"tls,omitempty"`
+	Transport                 *SingTransport            `json:"transport,omitempty"`
+	Type                      string                    `json:"type,omitempty"`
+	Method                    string                    `json:"method,omitempty"`
+	AlterID                   int                       `json:"alter_id,omitempty"`
+	Security                  string                    `json:"security,omitempty"`
+	UUID                      string                    `json:"uuid,omitempty"`
+	Default                   string                    `json:"default,omitempty"`
+	Outbounds                 []string                  `json:"outbounds,omitempty"`
+	Interval                  string                    `json:"interval,omitempty"`
+	Tolerance                 int                       `json:"tolerance,omitempty"`
+	URL                       string                    `json:"url,omitempty"`
+	Network                   string                    `json:"network,omitempty"`
+	Plugin                    string                    `json:"plugin,omitempty"`
+	PluginOpts                string                    `json:"plugin_opts,omitempty"`
+	ObfsParam                 string                    `json:"obfs_param,omitempty"`
+	Protocol                  string                    `json:"protocol,omitempty"`
+	ProtocolParam             string                    `json:"protocol_param,omitempty"`
+	Flow                      string                    `json:"flow,omitempty"`
+	PacketEncoding            string                    `json:"packet_encoding,omitempty"`
+	AuthStr                   string                    `json:"auth_str,omitempty"`
+	DisableMtuDiscovery       bool                      `json:"disable_mtu_discovery,omitempty"`
+	Down                      string                    `json:"down,omitempty"`
+	DownMbps                  int                       `json:"down_mbps,omitempty"`
+	RecvWindow                int                       `json:"recv_window,omitempty"`
+	RecvWindowConn            int                       `json:"recv_window_conn,omitempty"`
+	Up                        string                    `json:"up,omitempty"`
+	UpMbps                    int                       `json:"up_mbps,omitempty"`
+	Detour                    string                    `json:"detour,omitempty"`
+	Multiplex                 *SingMultiplex            `json:"multiplex,omitempty"`
+	Version                   int                       `json:"version,omitempty"`
+	UdpOverTcp                *SingUdpOverTcp           `json:"udp_over_tcp,omitempty"`
+	SystemInterface           bool                      `json:"system_interface,omitempty"`
+	InterfaceName             string                    `json:"interface_name,omitempty"`
+	LocalAddress              []string                  `json:"local_address,omitempty"`
+	PrivateKey                string                    `json:"private_key,omitempty"`
+	Peers                     []*SingWireguardMultiPeer `json:"peers,omitempty"`
+	PeerPublicKey             string                    `json:"peer_public_key,omitempty"`
+	PreSharedKey              string                    `json:"pre_shared_key,omitempty"`
+	Reserved                  []int64                   `json:"reserved,omitempty"`
+	MTU                       uint                      `json:"mtu,omitempty"`
+	CongestionController      string                    `json:"congestion_control,omitempty"`
+	UdpRelayMode              string                    `json:"udp_relay_mode,omitempty"`
+	ZeroRttHandshake          bool                      `json:"zero_rtt_handshake,omitempty"`
+	Heartbeat                 string                    `json:"heartbeat,omitempty"`
+	Obfs                      *SingObfs                 `json:"obfs,omitempty"`
+	Ignored                   bool                      `json:"-"`
+	TcpFastOpen               bool                      `json:"tcp_fast_open,omitempty"`
+	TcpMultiPath              bool                      `json:"tcp_multi_path,omitempty"`
+	Visible                   []string                  `json:"-"`
+	InterruptExistConnections bool                      `json:"interrupt_exist_connections,omitempty"`
+	Filter                    *[]FilterRule             `json:"filter,omitempty"`
+}
+
+type FilterRule struct {
+	Action   string   `json:"action"`
+	Keywords []string `json:"keywords,omitempty"`
+	Regexp   string   `json:"regexp,omitempty"`
+}
+
+func (f *FilterRule) UnmarshalJSON(data []byte) error {
+	var temp struct {
+		Action   string      `json:"action"`
+		Keywords interface{} `json:"keywords,omitempty"`
+		Regexp   string      `json:"regexp,omitempty"`
+	}
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return err
+	}
+	f.Action = temp.Action
+	switch v := temp.Keywords.(type) {
+	case []interface{}:
+		f.Keywords = make([]string, len(v))
+		for i, item := range v {
+			if s, ok := item.(string); ok {
+				f.Keywords[i] = s
+			}
+		}
+	case string:
+		f.Keywords = strings.Split(v, "|")
+	}
+	f.Regexp = temp.Regexp
+	return nil
+}
+
+type TemplatePartialConfig struct {
+	Outbounds json.RawMessage `json:"outbounds,omitempty"`
 }
 
 type SingUdpOverTcp struct {

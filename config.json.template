@@ -1,145 +1,481 @@
 {
-    "log": {},
-    "dns": {
-        "servers": [
-            {
-                "tag": "remote",
-                "address": "https://8.8.8.8/dns-query",
-                "detour": "select"
-            },
-            {
-                "tag": "local",
-                "address": "https://223.5.5.5/dns-query",
-                "detour": "direct"
-            },
-            {
-                "address": "rcode://success",
-                "tag": "block"
-            },
-            {
-                "address": "fakeip",
-                "tag": "fakeip"
-            }
-        ],
-        "rules": [
-            {
-                "outbound": [
-                    "any"
-                ],
-                "server": "local"
-            },
-            {
-                "disable_cache": true,
-                "geosite": [
-                    "category-ads-all"
-                ],
-                "server": "block"
-            },
-            {
-                "query_type": [
-                    "A",
-                    "AAAA"
-                ],
-                "rewrite_ttl": 1,
-                "server": "fakeip"
-            },
-            {
-                "clash_mode": "global",
-                "server": "remote"
-            },
-            {
-                "clash_mode": "direct",
-                "server": "local"
-            },
-            {
-                "geosite": "cn",
-                "server": "local"
-            }
-        ],
-        "strategy": "prefer_ipv4",
-        "independent_cache": true,
-        "fakeip": {
-            "enabled": true,
-            "inet4_range": "198.18.0.0/15",
-            "inet6_range": "fc00::/18"
-        }
-    },
-    "inbounds": [
-        {
-            "type": "tun",
-            "inet4_address": "172.19.0.1/30",
-            "inet6_address": "2001:0470:f9da:fdfa::1/64",
-            "strict_route": true,
-            "domain_strategy": "prefer_ipv4",
-            "mtu": 9000,
-            "endpoint_independent_nat": true,
-            "sniff": true,
-            "auto_route": false
-        },
-        {
-            "type": "socks",
-            "tag": "socks-in",
-            "listen": "127.0.0.1",
-            "domain_strategy": "prefer_ipv4",
-            "listen_port": 2333,
-            "users": []
-        },
-        {
-            "type": "mixed",
-            "tag": "mixed-in",
-            "domain_strategy": "prefer_ipv4",
-            "listen": "127.0.0.1",
-            "listen_port": 2334,
-            "set_system_proxy": true,
-            "users": []
-        }
-    ],
-    "outbounds": [
-        {
-            "type": "direct",
-            "tag": "direct"
-        },
-        {
-            "type": "block",
-            "tag": "block"
-        },
-        {
-            "type": "dns",
-            "tag": "dns-out"
-        }
-    ],
-    "route": {
-        "rules": [
-            {
-                "geosite": "category-ads-all",
-                "outbound": "block"
-            },
-            {
-                "port": 53,
-                "outbound": "dns-out"
-            },
-            {
-                "clash_mode": "direct",
-                "outbound": "direct"
-            },
-            {
-                "clash_mode": "global",
-                "outbound": "select"
-            },
-            {
-                "geoip": [
-                    "cn",
-                    "private"
-                ],
-                "outbound": "direct"
-            }
-        ],
-        "auto_detect_interface": true
-    },
-    "experimental": {
-        "clash_api": {
-            "external_controller": "127.0.0.1:9090",
-            "secret": ""
-        }
+  "log": {
+    "level": "debug",
+    "timestamp": true
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "0.0.0.0:9090",
+      "external_ui": "ui",
+      "secret": "password",
+      "external_ui_download_url": "https://mirror.ghproxy.com/https://github.com/MetaCubeX/Yacd-meta/archive/gh-pages.zip",
+      "external_ui_download_detour": "direct",
+      "default_mode": "rule"
     }
+  },
+  "dns": {
+    "servers": [
+      {
+        "tag": "proxyDns",
+        "address": "tls://8.8.8.8",
+        "address_resolver": "remote-resolver-dns",
+        "address_strategy": "ipv4_only",
+        "detour": "🚀 节点选择",
+        "client_subnet": "1.0.1.0"
+      },
+      {
+        "tag": "localDns",
+        "address": "https://223.5.5.5/dns-query",
+        "address_resolver": "resolver-dns",
+        "detour": "direct"
+      },
+      {
+        "tag": "remote-resolver-dns",
+        "address": "8.8.8.8",
+        "detour": "🚀 节点选择"
+      },
+      {
+        "tag": "resolver-dns",
+        "address": "223.5.5.5",
+        "detour": "direct"
+      },
+      {
+        "tag": "block",
+        "address": "rcode://success"
+      }
+    ],
+    "rules": [
+      {
+        "outbound": "any",
+        "server": "localDns",
+        "disable_cache": true
+      },
+      {
+        "rule_set": "geosite-cn",
+        "server": "localDns"
+      },
+      {
+        "clash_mode": "direct",
+        "server": "localDns"
+      },
+      {
+        "clash_mode": "global",
+        "server": "proxyDns"
+      },
+      {
+        "rule_set": "geosite-geolocation-!cn",
+        "server": "proxyDns"
+      }
+    ],
+    "final": "proxyDns",
+    "strategy": "ipv4_only",
+    "disable_cache": false,
+    "disable_expire": false,
+    "independent_cache": false
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "interface_name": "sing-box",
+      "inet4_address": "172.19.0.1/30",
+      "inet6_address": "fdfe:dcba:9876::1/126",
+      "mtu": 9000,
+      "auto_route": true,
+      "strict_route": true,
+      "sniff": true,
+      "stack": "system",
+      "platform": {
+        "http_proxy": {
+          "enabled": true,
+          "server": "127.0.0.1",
+          "server_port": 2080,
+          "bypass_domain": [],
+          "match_domain": []
+        }
+      }
+    },
+    {
+      "type": "mixed",
+      "listen": "0.0.0.0",
+      "listen_port": 2080,
+      "sniff": true,
+      "users": []
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "🚀 节点选择",
+      "type": "selector",
+      "outbounds": [
+        "♻️ 自动选择",
+        "🐸 手动切换",
+        "香港自动",
+        "日本自动",
+        "台湾自动",
+        "美国自动",
+        "狮城自动",
+        "香港节点",
+        "日本节点",
+        "美国节点",
+        "台湾节点",
+        "狮城节点",
+        "direct"
+      ],
+      "default": "♻️ 自动选择"
+    },
+    {
+      "tag": "🔯 Global",
+      "type": "selector",
+      "outbounds": [
+        "🚀 节点选择",
+        "🐸 手动切换",
+        "♻️ 自动选择",
+        "direct",
+        "香港自动",
+        "日本自动",
+        "台湾自动",
+        "美国自动",
+        "狮城自动",
+        "香港节点",
+        "日本节点",
+        "美国节点",
+        "台湾节点",
+        "狮城节点"
+      ],
+      "default": "🚀 节点选择"
+    },
+    {
+      "tag": "📹 YouTube",
+      "type": "selector",
+      "outbounds": [
+        "🚀 节点选择",
+        "🐸 手动切换",
+        "♻️ 自动选择",
+        "香港自动",
+        "日本自动",
+        "台湾自动",
+        "美国自动",
+        "狮城自动",
+        "香港节点",
+        "日本节点",
+        "美国节点",
+        "台湾节点",
+        "狮城节点"
+      ],
+      "default": "🚀 节点选择"
+    },
+    {
+      "tag": "🍀 Google",
+      "type": "selector",
+      "outbounds": [
+        "🚀 节点选择",
+        "🐸 手动切换",
+        "♻️ 自动选择",
+        "香港自动",
+        "日本自动",
+        "台湾自动",
+        "美国自动",
+        "狮城自动",
+        "香港节点",
+        "日本节点",
+        "美国节点",
+        "台湾节点",
+        "狮城节点"
+      ],
+      "default": "🚀 节点选择",
+      "interrupt_exist_connections" : false
+    },
+    {
+      "tag": "🐸 手动切换",
+      "type": "selector",
+      "filter": [
+        {
+          "action": "include",
+          "regexp": "{all}"
+        }
+      ]
+    },
+    {
+      "tag": "♻️ 自动选择",
+      "type": "urltest",
+      "filter": [
+        {
+          "action": "include",
+          "regexp": "{all}"
+        }
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "10m",
+      "tolerance": 50
+    },
+    {
+      "tag": "香港节点",
+      "type": "selector",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "🇭🇰|HK|hk|香港|港|HongKong"
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "日本节点",
+      "type": "selector",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "🇯🇵|JP|jp|日本|日|Japan"
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "美国节点",
+      "type": "selector",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "🇺🇸|US|us|美国|美|United States"
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "台湾节点",
+      "type": "selector",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "🇼🇸|台湾|tw|湾"
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "狮城节点",
+      "type": "selector",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "新加坡|坡|狮城|SG"
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "香港自动",
+      "type": "urltest",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "🇭🇰|HK|hk|香港|港|HongKong"
+          ]
+        }
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "10m",
+      "tolerance": 50
+    },
+    {
+      "tag": "日本自动",
+      "type": "urltest",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "jp|JP|日本|日"
+          ]
+        }
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "10m",
+      "tolerance": 50
+    },
+    {
+      "tag": "美国自动",
+      "type": "urltest",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "🇺🇸|US|us|美国|美|United States"
+          ]
+        }
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "10m",
+      "tolerance": 50
+    },
+    {
+      "tag": "台湾自动",
+      "type": "urltest",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "🇼🇸|台湾|tw|湾"
+          ]
+        }
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "10m",
+      "tolerance": 50
+    },
+    {
+      "tag": "狮城自动",
+      "type": "urltest",
+      "filter": [
+        {
+          "action": "include",
+          "keywords": [
+            "新加坡|坡|狮城|SG"
+          ]
+        }
+      ],
+      "url": "https://www.gstatic.com/generate_204",
+      "interval": "10m",
+      "tolerance": 50
+    },
+    {
+      "tag": "🛑 全球拦截",
+      "type": "selector",
+      "outbounds": [
+        "cblock",
+        "direct"
+      ]
+    },
+    {
+      "tag": "direct",
+      "type": "direct"
+    },
+    {
+      "type": "block",
+      "tag": "cblock"
+    },
+    {
+      "tag": "dns-out",
+      "type": "dns"
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "final": "🔯 Global",
+    "rules": [
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "port": 53
+          },
+          {
+            "protocol": "dns"
+          }
+        ],
+        "outbound": "dns-out"
+      },
+      {
+        "clash_mode": "direct",
+        "outbound": "direct"
+      },
+      {
+        "clash_mode": "global",
+        "outbound": "🔯 Global"
+      },
+      {
+        "domain": [
+          "clash.razord.top",
+          "yacd.metacubex.one",
+          "yacd.haishan.me",
+          "d.metacubex.one"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "geosite-youtube",
+        "outbound": "📹 YouTube"
+      },
+      {
+        "rule_set": [
+          "geoip-google",
+          "geosite-google"
+        ],
+        "outbound": "🍀 Google"
+      },
+      {
+        "rule_set": "geosite-geolocation-!cn",
+        "outbound": "🚀 节点选择"
+      },
+      {
+        "rule_set": [
+          "geoip-cn",
+          "geosite-cn"
+        ],
+        "outbound": "direct"
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geosite-youtube",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/youtube.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geoip-google",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/google.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geosite-google",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/google.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geosite-github",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/github.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geosite-geolocation-!cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/geolocation-!cn.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geoip/cn.srs",
+        "download_detour": "direct"
+      },
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://mirror.ghproxy.com/https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/sing/geo/geosite/cn.srs",
+        "download_detour": "direct"
+      }
+    ]
+  }
 }

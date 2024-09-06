@@ -18,13 +18,15 @@ import (
 )
 
 var (
-	url      string
-	path     string
-	outPath  string
-	include  string
-	exclude  string
-	insecure bool
-	ignore   bool
+	url        string
+	path       string
+	outPath    string
+	include    string
+	exclude    string
+	insecure   bool
+	ignore     bool
+	template   string
+	urltestOut bool
 )
 
 //go:embed config.json.template
@@ -38,6 +40,8 @@ func init() {
 	flag.StringVar(&exclude, "exclude", "", "urltest 排除的节点")
 	flag.BoolVar(&insecure, "insecure", false, "所有节点不验证证书")
 	flag.BoolVar(&ignore, "ignore", true, "忽略无法转换的节点")
+	flag.StringVar(&template, "t", "", "sing-box 模板文件")
+	flag.BoolVar(&urltestOut, "d", true, "是否默认输出 urltest 配置")
 	flag.Parse()
 }
 
@@ -68,25 +72,39 @@ func main() {
 		convert.ToInsecure(&c)
 	}
 
+	if template != "" {
+		b, err := os.ReadFile(template)
+		if err != nil {
+			panic(err)
+		}
+		configByte = b
+	}
+
 	s, err := convert.Clash2sing(c)
 	if err != nil {
 		fmt.Println(err)
 	}
-	outb, err := os.ReadFile(outPath)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			outb = configByte
-		} else {
-			panic(err)
+
+	var outb []byte
+	if template == "" {
+		outb, err = os.ReadFile(outPath)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				outb = configByte
+			} else {
+				panic(err)
+			}
 		}
+	} else {
+		outb = configByte
 	}
 
-	outb, err = convert.Patch(outb, s, include, exclude, lo.Map(singList, func(item map[string]any, index int) any {
+	outb, err = convert.Patch(outb, s, urltestOut, include, exclude, lo.Map(singList, func(item map[string]any, index int) any {
 		return item
 	}), tags...)
 	if err != nil {
 		panic(err)
 	}
 
-	os.WriteFile(outPath, outb, 0644)
+	os.WriteFile(outPath, outb, 0o644)
 }
