@@ -7,6 +7,8 @@ https://github.com/xmdhs/clash2sfa
 ## 用法
 `./clash2singbox -i config.yaml` 或者 `./clash2singbox -url <订阅链接>` 。
 
+个人自用, 优化了一下节点匹配策略, 当前模板导入到 ios 使用时, 在 sing-box 官方 app 中, 要开启 settings -> On Demand Rules -> Always On, 否则会出现无法连接的情况。
+
 多个订阅链接使用 | 分割
 
 更多用法见 `./clash2singbox -h`

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/xmdhs/clash2singbox/model/clash"
 	"github.com/xmdhs/clash2singbox/model/singbox"
@@ -62,14 +63,14 @@ func getTags(s []singbox.SingBoxOut) []string {
 	})
 }
 
-func Patch(b []byte, s []singbox.SingBoxOut, include, exclude string, extOut []interface{}, extags ...string) ([]byte, error) {
-	d, err := PatchMap(b, s, include, exclude, extOut, extags, true)
+func Patch(b []byte, s []singbox.SingBoxOut, urltestOut bool, include, exclude string, extOut []interface{}, extags ...string) ([]byte, error) {
+	d, err := PatchMap(b, s, include, exclude, extOut, extags, urltestOut)
 	if err != nil {
 		return nil, fmt.Errorf("Patch: %w", err)
 	}
 	bw := &bytes.Buffer{}
 	jw := json.NewEncoder(bw)
-	jw.SetIndent("", "    ")
+	jw.SetIndent("", "  ")
 	err = jw.Encode(d)
 	if err != nil {
 		return nil, fmt.Errorf("Patch: %w", err)
@@ -132,6 +133,15 @@ func PatchMap(
 		})
 	}
 
+	filerOutbounds, err := filerOutbounds(tpl, ftags)
+	if err != nil {
+		return nil, fmt.Errorf("PatchMap filter outbounds faild: %w", err)
+	}
+
+	if len(filerOutbounds) > 0 {
+		anyList = append(anyList, filerOutbounds...)
+	}
+
 	anyList = append(anyList, extOut...)
 	for _, v := range s {
 		anyList = append(anyList, v)
@@ -153,4 +163,80 @@ func PatchMap(
 	d["outbounds"] = anyList
 
 	return d, nil
+}
+
+var predefinedOutbounds = []singbox.SingBoxOut{
+	{Type: "direct", Tag: "direct"},
+	{Type: "block", Tag: "block"},
+	{Type: "dns", Tag: "dns-out"},
+}
+
+func isPredefinedOutbound(out singbox.SingBoxOut) bool {
+	for _, predefined := range predefinedOutbounds {
+		if out.Type == predefined.Type && out.Tag == predefined.Tag {
+			return true
+		}
+	}
+	return false
+}
+
+func filerOutbounds(tpl []byte, ftags []string) ([]any, error) {
+	var filteredOutbounds []any
+	var partialConfig singbox.TemplatePartialConfig
+	err := json.Unmarshal(tpl, &partialConfig)
+	if err != nil {
+		fmt.Println("Error parsing JSON:", err)
+		return nil, nil
+	}
+	if len(partialConfig.Outbounds) > 0 {
+		var outboundsTemp []singbox.SingBoxOut
+		err = json.Unmarshal(partialConfig.Outbounds, &outboundsTemp)
+		if err != nil {
+			fmt.Println("Error parsing outbounds:", err)
+		}
+		for _, outbound := range outboundsTemp {
+			if outbound.Filter != nil {
+				for _, filterInfo := range *outbound.Filter {
+					var filtered []string
+					if filterInfo.Action == "include" {
+						if filterInfo.Regexp != "" {
+							regexp := filterInfo.Regexp
+							if regexp == "{all}" {
+								regexp = ".*"
+							}
+							filtered_grep, err := filter(true, regexp, ftags)
+							if err != nil {
+								return nil, fmt.Errorf("filter Tag %s regexp [%s] faild: %w", outbound.Tag, filterInfo.Regexp, err)
+							}
+							if len(ftags) > 0 {
+								filtered = append(filtered, filtered_grep...)
+							}
+						} else if len(filterInfo.Keywords) > 0 {
+							regexp := strings.Join(filterInfo.Keywords, "|")
+							filtered_grep, err := filter(true, regexp, ftags)
+							if err != nil {
+								return nil, err
+							}
+							if len(filtered_grep) > 0 {
+								filtered = append(filtered, filtered_grep...)
+							}
+						}
+					}
+					if len(filtered) > 0 {
+						outbound.Outbounds = filtered
+						outbound.Filter = nil
+						filteredOutbounds = append(filteredOutbounds, outbound)
+					} else {
+						fmt.Printf("Tag %s canot filer nodes keywords [%s] regexp [%s]\n", outbound.Tag, strings.Join(filterInfo.Keywords, "|"), filterInfo.Regexp)
+					}
+				}
+			} else {
+				if isPredefinedOutbound(outbound) {
+					continue
+				}
+				filteredOutbounds = append(filteredOutbounds, outbound)
+			}
+		}
+	}
+	return filteredOutbounds, nil
 }
