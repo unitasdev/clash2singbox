@@ -221,6 +221,15 @@ func filerOutbounds(tpl []byte, ftags []string) ([]any, error) {
 								filtered = append(filtered, filtered_grep...)
 							}
 						}
+					} else if filterInfo.Action == "exclude" {
+						regexp := strings.Join(filterInfo.Keywords, "|")
+						filtered_grep, err := filter(false, regexp, ftags)
+						if err != nil {
+							return nil, err
+						}
+						if len(filtered_grep) > 0 {
+							filtered = append(filtered, filtered_grep...)
+						}
 					}
 					if len(filtered) > 0 {
 						outbound.Outbounds = filtered
