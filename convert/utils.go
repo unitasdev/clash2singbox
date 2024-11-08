@@ -86,6 +86,15 @@ func ToInsecure(c *clash.Clash) {
 	}
 }
 
+func contains(slice []string, item string) bool {
+	for _, v := range slice {
+		if v == item {
+			return true
+		}
+	}
+	return false
+}
+
 func PatchMap(
 	tpl []byte,
 	s []singbox.SingBoxOut,
@@ -133,18 +142,38 @@ func PatchMap(
 		})
 	}
 
-	filerOutbounds, err := filerOutbounds(tpl, ftags)
+	fileredOutbounds, emptyOutbounds, err := filerOutbounds(tpl, ftags)
 	if err != nil {
 		return nil, fmt.Errorf("PatchMap filter outbounds faild: %w", err)
 	}
 
-	if len(filerOutbounds) > 0 {
-		anyList = append(anyList, filerOutbounds...)
+	if len(fileredOutbounds) > 0 {
+		anyList = append(anyList, fileredOutbounds...)
 	}
 
 	anyList = append(anyList, extOut...)
 	for _, v := range s {
 		anyList = append(anyList, v)
+	}
+
+	for i := 0; i < len(anyList); i++ {
+		outbound, ok := anyList[i].(singbox.SingBoxOut)
+		if !ok || outbound.Outbounds == nil {
+			continue
+		}
+		var outbounds []string
+		for _, tag := range outbound.Outbounds {
+			if !contains(emptyOutbounds, tag) {
+				outbounds = append(outbounds, tag)
+			}
+		}
+		if len(outbounds) == 0 {
+			anyList = append(anyList[:i], anyList[i+1:]...)
+			i--
+		} else {
+			outbound.Outbounds = outbounds
+			anyList[i] = outbound
+		}
 	}
 
 	anyList = append(anyList, singbox.SingBoxOut{
@@ -180,13 +209,14 @@ func isPredefinedOutbound(out singbox.SingBoxOut) bool {
 	return false
 }
 
-func filerOutbounds(tpl []byte, ftags []string) ([]any, error) {
+func filerOutbounds(tpl []byte, ftags []string) ([]any, []string, error) {
 	var filteredOutbounds []any
+	var emptyOutbounds []string
 	var partialConfig singbox.TemplatePartialConfig
 	err := json.Unmarshal(tpl, &partialConfig)
 	if err != nil {
 		fmt.Println("Error parsing JSON:", err)
-		return nil, nil
+		return nil, nil, nil
 	}
 	if len(partialConfig.Outbounds) > 0 {
 		var outboundsTemp []singbox.SingBoxOut
@@ -206,7 +236,7 @@ func filerOutbounds(tpl []byte, ftags []string) ([]any, error) {
 							}
 							filtered_grep, err := filter(true, regexp, ftags)
 							if err != nil {
-								return nil, fmt.Errorf("filter Tag %s regexp [%s] faild: %w", outbound.Tag, filterInfo.Regexp, err)
+								return nil, nil, fmt.Errorf("filter Tag %s regexp [%s] faild: %w", outbound.Tag, filterInfo.Regexp, err)
 							}
 							if len(ftags) > 0 {
 								filtered = append(filtered, filtered_grep...)
@@ -215,7 +245,7 @@ func filerOutbounds(tpl []byte, ftags []string) ([]any, error) {
 							regexp := strings.Join(filterInfo.Keywords, "|")
 							filtered_grep, err := filter(true, regexp, ftags)
 							if err != nil {
-								return nil, err
+								return nil, nil, err
 							}
 							if len(filtered_grep) > 0 {
 								filtered = append(filtered, filtered_grep...)
@@ -225,7 +255,7 @@ func filerOutbounds(tpl []byte, ftags []string) ([]any, error) {
 						regexp := strings.Join(filterInfo.Keywords, "|")
 						filtered_grep, err := filter(false, regexp, ftags)
 						if err != nil {
-							return nil, err
+							return nil, nil, err
 						}
 						if len(filtered_grep) > 0 {
 							filtered = append(filtered, filtered_grep...)
@@ -237,6 +267,7 @@ func filerOutbounds(tpl []byte, ftags []string) ([]any, error) {
 						filteredOutbounds = append(filteredOutbounds, outbound)
 					} else {
 						fmt.Printf("Tag %s canot filer nodes keywords [%s] regexp [%s]\n", outbound.Tag, strings.Join(filterInfo.Keywords, "|"), filterInfo.Regexp)
+						emptyOutbounds = append(emptyOutbounds, outbound.Tag)
 					}
 				}
 			} else {
@@ -247,5 +278,5 @@ func filerOutbounds(tpl []byte, ftags []string) ([]any, error) {
 			}
 		}
 	}
-	return filteredOutbounds, nil
+	return filteredOutbounds, emptyOutbounds, nil
 }
